@@ -2,8 +2,8 @@ QuestieMap = {...}
 
 qQuestIdFrames = {}
 
-local HBD = LibStub("HereBeDragonsQuestie-2.0")
-local HBDPins = LibStub("HereBeDragonsQuestie-Pins-2.0")
+local HBD = LibStub("HereBeDragons-2.0")
+local HBDPins = LibStub("HereBeDragons-Pins-2.0")
 local HBDMigrate = LibStub("HereBeDragonsQuestie-Migrate")
 
 
@@ -187,8 +187,11 @@ function QuestieMap:DrawWorldIcon(data, AreaID, x, y, showFlag)
             -- We do not want to hook the OnUpdate again!
             iconMinimap:SetScript("OnUpdate", function(frame)
                 --Only run if these two are true!
-                if(frame.fadeLogic and frame.miniMapIcon) then
+                if (frame.fadeLogic and frame.miniMapIcon) then
                    frame:fadeLogic()
+                end
+                if frame.glowUpdate then
+                    frame:glowUpdate()
                 end
             end)
         end
