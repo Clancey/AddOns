@@ -98,7 +98,7 @@ function TitanPanelAmmoButton_PLAYER_LOGIN()
 		TitanPanelAmmoButton:RegisterEvent("UPDATE_INVENTORY_DURABILITY")
 		isThrown = true;
 		isAmmo = nil;
-	elseif loc == "INVTYPE_RANGEDRIGHT" then
+	elseif loc == "INVTYPE_RANGED" or loc == "INVTYPE_RANGEDRIGHT" then
 		TitanPanelAmmoButton:RegisterEvent("ACTIONBAR_HIDEGRID")			
 		isAmmo = true;
 		isThrown = nil;
@@ -189,7 +189,7 @@ function TitanPanelAmmoUpdateDisplay()
 		count = GetInventoryItemCount("player", rangedSlotID) or count
 --			count = GetInventoryItemDurability(rangedSlotID);
 		
-	elseif loc == "INVTYPE_RANGEDRIGHT" then
+	elseif loc == "INVTYPE_RANGED" or loc == "INVTYPE_RANGEDRIGHT" then
 
 		if TitanPanelAmmoButton:IsEventRegistered("UPDATE_INVENTORY_DURABILITY") then			
 			TitanPanelAmmoButton:UnregisterEvent("UPDATE_INVENTORY_DURABILITY")
