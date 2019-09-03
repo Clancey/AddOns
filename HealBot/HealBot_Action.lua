@@ -381,7 +381,7 @@ function HealBot_Action_SetrSpell()
         if HEALBOT_GAME_VERSION>7 then
             sName=HealBot_KnownSpell(HEALBOT_POWER_WORD_FORTITUDE)
         else
-            sName=HealBot_KnownSpell(HEALBOT_POWER_WORD_FORTITUDE_CLASSIC)
+            sName=HealBot_KnownSpell(HBC_POWER_WORD_FORTITUDE)
         end
 		if sName then 
 			HealBot_RangeSpells["BUFF"]=sName
@@ -1269,7 +1269,7 @@ function HealBot_Action_SetBar3Value(button, sName)
             HealBot_Action_SetBar3ColAlpha(barName, y, hcr, hcg, hcb, HealBot_Action_rCalls[unit]["hca"])
         end
     else
-        if HealBot_Action_rCalls[unit]["powerIndicator"]~="p0" then
+        if HealBot_Action_rCalls[unit] and HealBot_Action_rCalls[unit]["powerIndicator"]~="p0" then
             HealBot_Action_rCalls[unit]["powerIndicator"]="p0"
             iconName = _G[barName:GetName().."Icon"..1];
             iconName:SetAlpha(0)
@@ -2928,6 +2928,15 @@ function HealBot_Action_GetSpell(cType, cKey)
                 sVar=GetItemInfo(sID)
             else
                 sVar=GetSpellInfo(sID)
+				if HEALBOT_GAME_VERSION==1 then
+					local rank = GetSpellSubtext(sID)
+					if rank then
+                        local knownHealSpells=HealBot_Init_retFoundHealSpells()
+                        if knownHealSpells[sVar] then
+                            sVar=sVar.."("..rank..")"
+                        end
+					end
+				end
             end
         end
     end
