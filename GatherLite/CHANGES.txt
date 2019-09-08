@@ -1,16 +1,16 @@
-lightweight tag 7e5b4c4f2ba0807b88701662c32eefc8de5e7456 1.1.7-classic
+lightweight tag 8c632fc92a1f266feac77f79028fa49bdc403ad4 1.2.4-classic
 Author:	Wuild <wuildz@gmail.com>
-Date:	Tue Sep 3 15:06:02 2019 +0200
+Date:	Sun Sep 8 02:55:22 2019 +0200
 
-commit 7e5b4c4f2ba0807b88701662c32eefc8de5e7456
+commit 8c632fc92a1f266feac77f79028fa49bdc403ad4
 Author: Wuild <wuildz@gmail.com>
-Date:   Tue Sep 3 15:06:02 2019 +0200
+Date:   Sun Sep 8 02:55:22 2019 +0200
 
-    Update methods.lua
+    Update README.md
 
-commit 84e871638e3a8eee1d14abb854fc551151af02c2
+commit 9bc9b0afbfbe4a56ed5b2dc796e5113814a9a958
 Author: Wuild <wuildz@gmail.com>
-Date:   Tue Sep 3 15:05:51 2019 +0200
+Date:   Sun Sep 8 02:52:55 2019 +0200
 
-    fixed node position error
+    updated dependencies
 

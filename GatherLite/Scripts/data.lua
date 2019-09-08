@@ -1,26 +1,35 @@
-local name, GatherLite = ...
+GatherLite = LibStub("AceAddon-3.0"):NewAddon("GatherLite", "AceConsole-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceComm-3.0", "AceSerializer-3.0")
+local name, _GatherLite = ...
 
-GatherLite.name = name;
-GatherLite.version = "1.1.7-classic";
+_GatherLite.name = name;
+_GatherLite.version = "1.2.4-classic";
 
-GatherLite.isClassic = select(4, GetBuildInfo()) < 20000;
+_GatherLite.isClassic = select(4, GetBuildInfo()) < 20000;
 
-GatherLite.frames = {};
+_GatherLite.frames = {};
 
-GatherLite.gatherSpellRanges = {
+_GatherLite.gatherSpellRanges = {
     default = 0.0065,
     fish = 0.0130
 };
 
-GatherLite.TimeSinceLastUpdate = 0;
-GatherLite.UpdateInterval = 1.0;
-GatherLite.nodes = {
+_GatherLite.TimeSinceLastUpdate = 0;
+_GatherLite.UpdateInterval = 1.0;
+_GatherLite.nodes = {
     minimap = {},
     worldmap = {}
 };
 
-if (GatherLite.isClassic) then
-    GatherLite.spellIDs = {
+-- tracker data
+_GatherLite.tracker = {
+    spellType = nil,
+    spellID = nil,
+    target = nil,
+    ended = nil
+};
+
+if (_GatherLite.isClassic) then
+    _GatherLite.spellIDs = {
         [GetSpellInfo(2575)] = "mining", -- Mining
         [GetSpellInfo(2366)] = "herbalism", -- Herbalism
         [GetSpellInfo(7620)] = "fish", -- Fishing(Apprentice)
@@ -33,7 +42,7 @@ if (GatherLite.isClassic) then
         [GetSpellInfo(6478)] = "treasure", -- Opening()
     };
 else
-    GatherLite.spellIDs = {
+    _GatherLite.spellIDs = {
         [GetSpellInfo(2575)] = "mining", -- Mining
         [GetSpellInfo(2366)] = "herbalism", -- Herbalism
         [GetSpellInfo(7620)] = "fish", -- Fishing(Apprentice)
@@ -62,7 +71,7 @@ else
     };
 end ;
 
-GatherLite.classColours = {
+_GatherLite.classColours = {
     DEATHKNIGHT = { r = 0.77, g = 0.12, b = 0.23, fs = '|cffC41F3B' },
     DEMONHUNTER = { r = 0.64, g = 0.19, b = 0.79, fs = '|cffA330C9' },
     DRUID = { r = 1.00, g = 0.49, b = 0.04, fs = '|cffFF7D0A' },
@@ -76,25 +85,46 @@ GatherLite.classColours = {
     WARRIOR = { r = 0.78, g = 0.61, b = 0.43, fs = '|cffC79C6E' }
 }
 
-GatherLite.defaultConfigs = {
-    enabled = true,
-    minimapButton = true,
-    debugging2 = false,
-    mining = true,
-    fish = true,
-    herbalism = true,
-    treasure = true,
-    artifacts = true,
-    showOnMinimap = true,
-    showOnWorldMap = true,
-    minimapIconSize = 12,
-    worldmapIconSize = 12,
-    MiniMapPosition = 45,
-    shareGuild = false;
-    shareParty = false,
-    minimapOpacity = 1,
-    worldmapOpacity = 1,
-    minimapLoot = true,
-    worldmapLoot = true,
-    minimapEdge = false
+_GatherLite.configsDefaults = {
+    global = {
+        nodes = {
+            mining = {},
+            herbalism = {},
+            treasure = {},
+            fish = {},
+            artifacts = {}
+        }
+    },
+    char = {
+        enabled = true,
+        debugging = false,
+        tracking = {
+            mining = true,
+            herbalism = true,
+            treasures = true,
+            fish = true,
+            artifacts = true
+        },
+        minimap = {
+            enabled = true,
+            hide = false,
+            size = 12,
+            opacity = 1,
+            distance = 70,
+            loot = true,
+            edge = false
+        },
+        worldmap = {
+            enabled = true,
+            size = 12,
+            opacity = 1,
+            loot = true
+        },
+        p2p = {
+            guild = true,
+            party = false
+        }
+    },
+    profile = {
+    }
 }
