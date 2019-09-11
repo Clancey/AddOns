@@ -29,6 +29,51 @@ _GatherLite.hideTooltip = function()
     _GatherLite.showingTooltip = false;
 end
 
+local minimapIcon = LibStub("LibDataBroker-1.1"):NewDataObject("GatherLiteMinimapIcon", {
+    type = "data source",
+    text = "Gatherlite",
+    icon = "Interface\\Icons\\inv_misc_spyglass_02",
+
+    OnClick = function(self, button)
+        if button == "LeftButton" then
+            if IsShiftKeyDown() then
+                GatherLite.db.char.enabled = not GatherLite.db.char.enabled;
+                GatherLite:drawMinimap();
+                GatherLite:drawWorldmap();
+                return ;
+            end
+
+            local dropDown = CreateFrame("Frame", "GatherLiteContextMenu", UIParent, "UIDropDownMenuTemplate")
+            UIDropDownMenu_Initialize(dropDown, GatherLite:MinimapContextMenu(), "MENU")
+            ToggleDropDownMenu(1, nil, dropDown, "cursor", 3, -3)
+        elseif button == "RightButton" then
+            if not GatherLite.OptionsPanel:IsShown() then
+                PlaySound(882);
+                LibStub("AceConfigDialog-3.0"):Open("GatherLite", GatherLite.OptionsPanel)
+            else
+                GatherLite.OptionsPanel:Hide();
+            end
+        end
+    end,
+
+    OnTooltipShow = function(tooltip)
+        tooltip:SetText(_GatherLite.name .. " |cFF00FF00" .. _GatherLite.version .. "|r");
+        tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('mining'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.mining));
+        tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('herbalism'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.herbalism));
+
+        if not _GatherLite.isClassic then
+            tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('archaeology'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.artifacts));
+        end
+        tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('fish'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.fish));
+        tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('treasures'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.treasure));
+
+        tooltip:AddLine(" ");
+        tooltip:AddLine(GatherLite:Colorize("Left Click", 'gray') .. ": " .. "Open tracker menu");
+        tooltip:AddLine(GatherLite:Colorize("Shift + Left Click", 'gray') .. ": " .. "Toggle " .. _GatherLite.name);
+        tooltip:AddLine(GatherLite:Colorize("Right Click", 'gray') .. ": " .. "Open settings");
+    end,
+});
+
 function GatherLite:OnInitialize()
     self.db = LibStub("AceDB-3.0"):New("GatherLiteConfig", _GatherLite.configsDefaults, true)
     self.minimap = LibStub("LibDBIcon-1.0");
@@ -39,13 +84,12 @@ function GatherLite:OnInitialize()
     GatherLite:RegisterChatCommand("gatherlite", "GatherSlash")
 
     -- register synchronization
-    GatherLite:RegisterComm(_GatherLite.name .. "Sync", "p2pSync")
     GatherLite:RegisterComm(_GatherLite.name .. "Node", "p2pNode")
     GatherLite:RegisterComm(_GatherLite.name .. "Ver", "VersionCheck")
 
     GatherLite:ScheduleTimer("p2pDatabase", 10)
     GatherLite:ScheduleRepeatingTimer("SendVersionCheck", 5)
-    GatherLite:ScheduleRepeatingTimer("p2pDatabase", 1800)
+    GatherLite:ScheduleRepeatingTimer("p2pDatabase", 3600)
     GatherLite:ScheduleRepeatingTimer("checkNodePositions", 1);
 
     GatherLite:RegisterEvent("UNIT_SPELLCAST_SENT", "EventHandler")
@@ -53,9 +97,6 @@ function GatherLite:OnInitialize()
     GatherLite:RegisterEvent("UNIT_SPELLCAST_FAILED", "EventHandler")
     GatherLite:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED", "EventHandler")
     GatherLite:RegisterEvent("LOOT_OPENED", "EventHandler")
-
-    GatherLite:drawMinimap();
-    GatherLite:drawWorldmap();
 
     GatherLite:print(GatherLite:Colorize(_GatherLite.version, "blue"), "has been loaded");
     GatherLite:print("use |cFF00FF00/gather|r or |cFF00FF00/gatherlite|r to access addon settings");
@@ -66,5 +107,10 @@ function GatherLite:OnInitialize()
     end
     GatherLite:debug("Found", "|cFF00FF00" .. GatherLite:tablelength(GatherLite.db.global.nodes.fish) .. "|r", "fishing spots");
     GatherLite:debug("Found", "|cFF00FF00" .. GatherLite:tablelength(GatherLite.db.global.nodes.treasure) .. "|r", "treasures");
+
+    GatherLite.minimap:Register("GatherLiteMinimapIcon", minimapIcon, self.db.profile.minimap);
+
+    GatherLite:drawMinimap();
+    GatherLite:drawWorldmap();
 
 end

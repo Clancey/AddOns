@@ -1,24 +1,41 @@
 local SELL_PRICE_TEXT = format("%s:", SELL_PRICE)
+local COUNT_TEXT = " |cffAAAAFFx%d|r"
 
 local function ShouldShowPrice(tt)
 	if MerchantFrame:IsShown() then
 		local name = tt:GetOwner():GetName()
-		return name:find("Character") or name:find("TradeSkill")
+		if name then -- bagnon sanity check
+			return name:find("Character") or name:find("TradeSkill")
+		end
 	end
 	return true
 end
 
-local function SetPrice(tt, count, item)
+local function GetAmountString(count, isShift)
+	local spacing = count < 10 and "  " or ""
+	return (count > 1 or isShift) and COUNT_TEXT:format(count)..spacing or ""
+end
+
+-- OnTooltipSetItem fires twice for recipes
+local function CheckRecipe(tt, classID, isBagItem)
+	if classID == LE_ITEM_CLASS_RECIPE and not isBagItem then
+		tt.isFirstMoneyLine = not tt.isFirstMoneyLine
+		return not tt.isFirstMoneyLine
+	end
+	return true
+end
+
+local function SetPrice(tt, count, item, isBagItem)
 	if ShouldShowPrice(tt) then
+		count = count or 1
 		item = item or select(2, tt:GetItem())
 		if item then
-			local sellPrice = select(11, GetItemInfo(item))
-			local money = sellPrice * count
-			if money > 0 then
+			local sellPrice, classID = select(11, GetItemInfo(item))
+			if sellPrice and sellPrice > 0 and CheckRecipe(tt, classID, isBagItem) then
 				if IsShiftKeyDown() and count > 1 then
-					SetTooltipMoney(tt, sellPrice, nil, SELL_PRICE_TEXT.." |cffAAAAFFx1|r")
+					SetTooltipMoney(tt, sellPrice, nil, SELL_PRICE_TEXT..GetAmountString(1, true))
 				else
-					SetTooltipMoney(tt, money, nil, SELL_PRICE_TEXT)
+					SetTooltipMoney(tt, sellPrice * count, nil, SELL_PRICE_TEXT..GetAmountString(count))
 				end
 				tt:Show()
 			end
@@ -42,7 +59,7 @@ local SetItem = {
 	end,
 	SetBagItem = function(tt, bag, slot)
 		local _, count = GetContainerItemInfo(bag, slot)
-		SetPrice(tt, count)
+		SetPrice(tt, count, nil, true)
 	end,
 	--SetBagItemChild
 	--SetBuybackItem -- already shown
@@ -53,6 +70,10 @@ local SetItem = {
 		local itemLink = GetCraftReagentItemLink(index, reagent)
 		SetPrice(tt, count, itemLink)
 	end,
+	SetCraftSpell = function(tt)
+		SetPrice(tt)
+	end,
+	--SetHyperlink -- item information is not readily available
 	SetInboxItem = function(tt, messageIndex, attachIndex)
 		local count, itemID
 		if attachIndex then
@@ -109,39 +130,67 @@ local SetItem = {
 	end,
 }
 
-for name, func in pairs(SetItem) do
-	hooksecurefunc(GameTooltip, name, func)
+for method, func in pairs(SetItem) do
+	hooksecurefunc(GameTooltip, method, func)
 end
 
--- item information is not readily available on tt:SetHyperlink()
 ItemRefTooltip:HookScript("OnTooltipSetItem", function(tt)
 	local item = select(2, tt:GetItem())
 	if item then
-		local itemSellPrice = select(11, GetItemInfo(item))
-		if itemSellPrice and itemSellPrice > 0 then
-			tt.shownMoneyFrames = nil -- OnTooltipSetItem fires twice for recipes
-			SetTooltipMoney(tt, itemSellPrice, nil, SELL_PRICE_TEXT)
+		local sellPrice, classID = select(11, GetItemInfo(item))
+		if sellPrice and sellPrice > 0 and CheckRecipe(tt, classID) then
+			SetTooltipMoney(tt, sellPrice, nil, SELL_PRICE_TEXT)
 		end
 	end
 end)
 
-local function OnEvent(self, event, isInitialLogin, isReloadingUi)
-	if isInitialLogin or isReloadingUi then
-		-- support bagnon /bank
-		if Bagnon then
-			GameTooltip:HookScript("OnTooltipSetItem", function(tt)
-				if BagnonFramebank and BagnonFramebank:IsMouseOver() then
-					local info = tt:GetOwner():GetParent().info
-					if info then
-						tt.shownMoneyFrames = nil
-						SetPrice(tt, info.count or 1)
-					end
-				end
-			end)
+local Auctioneer = {
+	AucAdvAppraiserFrame = function(tt)
+		local itemID = select(2, tt:GetItem()):match("item:(%d+)")
+		for _, v in pairs(AucAdvAppraiserFrame.list) do
+			if v[1] == itemID then
+				SetPrice(tt, v[6])
+				break
+			end
 		end
-	end
+	end,
+	AucAdvSearchUiAuctionFrame = function(tt)
+		local row = tt:GetOwner():GetID()
+		local count = AucAdvanced.Modules.Util.SearchUI.Private.gui.sheet.rows[row][4]
+		SetPrice(tt, tonumber(count:GetText()))
+	end,
+	AucAdvSimpFrame = function(tt)
+		SetPrice(tt, AucAdvSimpFrame.detail[1])
+	end,
+}
+
+local function IsShown(frame)
+	return frame and frame:IsShown() and frame:IsMouseOver()
 end
 
-local f = CreateFrame("Frame")
-f:RegisterEvent("PLAYER_ENTERING_WORLD")
-f:SetScript("OnEvent", OnEvent)
+GameTooltip:HookScript("OnTooltipSetItem", function(tt)
+	if AucAdvanced and IsShown(AuctionFrame) then
+		for frame, func in pairs(Auctioneer) do
+			if IsShown(_G[frame]) then
+				func(tt)
+				break
+			end
+		end
+	elseif AuctionFaster and IsShown(AuctionFrame) and AuctionFrame.selectedTab >= 4 then
+		local count
+		if AuctionFrame.selectedTab == 4 then
+			count = tt:GetOwner().item.count
+		elseif AuctionFrame.selectedTab == 5 then
+			count = AuctionFaster.hoverRowData.count -- provided by AuctionFaster
+		end
+		SetPrice(tt, count)
+	elseif Bagnon and IsShown(BagnonFramebank) then
+		local info = tt:GetOwner():GetParent().info
+		if info then -- /bagnon bank
+			SetPrice(tt, info.count)
+		end
+	-- lazy check for any chat windows that are docked to ChatFrame1
+	elseif DEFAULT_CHAT_FRAME:IsMouseOver() then -- Chatter, Prat
+		SetPrice(tt)
+	end
+end)

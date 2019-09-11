@@ -2,7 +2,7 @@ GatherLite = LibStub("AceAddon-3.0"):NewAddon("GatherLite", "AceConsole-3.0", "A
 local name, _GatherLite = ...
 
 _GatherLite.name = name;
-_GatherLite.version = "1.2.4-classic";
+_GatherLite.version = "1.2.13-classic";
 
 _GatherLite.isClassic = select(4, GetBuildInfo()) < 20000;
 
@@ -126,5 +126,8 @@ _GatherLite.configsDefaults = {
         }
     },
     profile = {
+        minimap = {
+            hide = false
+        }
     }
 }

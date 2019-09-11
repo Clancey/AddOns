@@ -6,8 +6,8 @@ local L = LibStub("AceLocale-3.0"):GetLocale("GatherLite", true)
 local Semver = LibStub("Semver");
 
 --options interface
-local OptionsPanel = AceGUI:Create("Frame");
-_G["GatherLiteOptionPanel"] = OptionsPanel.frame;
+GatherLite.OptionsPanel = AceGUI:Create("Frame");
+_G["GatherLiteOptionPanel"] = GatherLite.OptionsPanel.frame;
 table.insert(UISpecialFrames, "GatherLiteOptionPanel");
 
 GatherLite.NewVersionExists = false;
@@ -111,7 +111,7 @@ function GatherLite:CopyDefaults(src, dst)
 end
 
 function GatherLite:ShowSettings()
-    LibStub("AceConfigDialog-3.0"):Open("GatherLite", OptionsPanel)
+    LibStub("AceConfigDialog-3.0"):Open("GatherLite", GatherLite.OptionsPanel)
 end
 
 -- slash commands
@@ -468,7 +468,7 @@ function GatherLite:createNodeTooltip(f, node, lootTable)
     f:SetScript('OnEnter', function()
 
         _GatherLite.tooltip:ClearLines();
-        _GatherLite.tooltip:SetOwner(f, "ANCHOR_CURSOR");
+        _GatherLite.tooltip:SetOwner(f, "TOP");
         _GatherLite.tooltip:SetText(node.name);
         _GatherLite.tooltip:AddDoubleLine(GatherLite:translate('tooltip.last_visit'), GatherLite:Colorize(GatherLite:leadingZeros(node.date.day) .. '/' .. GatherLite:leadingZeros(node.date.month) .. '/' .. GatherLite:leadingZeros(node.date.year) .. " - " .. GatherLite:leadingZeros(node.date.hour) .. ':' .. GatherLite:leadingZeros(node.date.min) .. ':' .. GatherLite:leadingZeros(node.date.sec), "white"));
 
@@ -488,9 +488,13 @@ function GatherLite:createNodeTooltip(f, node, lootTable)
             }
         end
 
+        if node.coins and node.coins > 0 then
+            SetTooltipMoney(_GatherLite.tooltip, node.coins)
+        end
         if node.player.name and _GatherLite.classColours[node.player.class] then
             _GatherLite.tooltip:AddDoubleLine(GatherLite:translate('tooltip.found_by'), _GatherLite.classColours[node.player.class].fs .. node.player.name .. " - " .. node.player.realm);
         end
+
         _GatherLite.tooltip:Show();
         _GatherLite.showingTooltip = true;
     end)
@@ -709,12 +713,17 @@ function GatherLite:VersionCheck(event, msg, channel, sender)
         return
     end
 
-    local version = Semver:Parse(message);
-    if not version then
+    local removeVersion = Semver:Parse(message);
+    if not removeVersion then
         return
     end
 
-    if Semver:Parse(_GatherLite.version) < Semver:Parse(version) and not GatherLite.NewVersionExists then
+    local localVersion = Semver:Parse(_GatherLite.version);
+    if not localVersion then
+        return
+    end
+
+    if localVersion < removeVersion and not GatherLite.NewVersionExists then
         GatherLite.NewVersionExists = true;
         GatherLite:print("A new version of", _GatherLite.name, "has been detected, please visit curseforge.com to download the latest version, or use the twitch app to keep you addons updated")
     end
@@ -735,38 +744,13 @@ function GatherLite:p2pNode(event, msg, channel, sender)
 
     local success, node = GatherLite:Deserialize(msg);
     if success then
-        if not GatherLite:findExistingNode(node.type, node.position.x, node.position.y) then
-            node.shared = true;
-            node.loot = {};
-            table.insert(GatherLite.db.global.nodes[node.type], node);
-            GatherLite:createNode(node)
-            GatherLite:debug("received p2p node at " .. "|cff32CD32" .. node.position.x .. " " .. node.position.y .. "|r");
-        end
-    end
-end
-
-function GatherLite:p2pSync(event, msg, channel, sender)
-    if (sender == UnitName("player")) then
-        return
-    end
-
-    if channel == "GUILD" and not GatherLite.db.char.p2p.guild then
-        return
-    end
-
-    if channel == "PARTY" and not GatherLite.db.char.p2p.party then
-        return ;
-    end
-
-    local success, data = GatherLite:Deserialize(msg);
-    if success then
-        for i2, node in ipairs(data) do
+        if node.position and node.position.mapID and node.position.x and node.position.y then
             if not GatherLite:findExistingNode(node.type, node.position.x, node.position.y) then
                 node.shared = true;
                 node.loot = {};
                 table.insert(GatherLite.db.global.nodes[node.type], node);
                 GatherLite:createNode(node)
-                GatherLite:debug("received p2p node at " .. "|cff32CD32" .. node.position.x .. " " .. node.position.y .. "|r");
+                GatherLite:debug("received p2p " .. node.type .. " node from " .. sender);
             end
         end
     end
@@ -820,6 +804,11 @@ end
 
 -- sanitize database on load
 function GatherLite:sanitizeDatabase()
+
+    if not GatherLiteGlobalSettings then
+        return
+    end
+
     if not GatherLiteGlobalSettings.database then
         return
     end
@@ -829,61 +818,26 @@ function GatherLite:sanitizeDatabase()
             GatherLite:sanitizeNode(type, i)
         end
     end
+
+    --for i, node in pairs(GatherLite.db.global.nodes["treasure"]) do
+    --    for link, item in ipairs(node.loot) do
+    --        local name = select(1, GetItemInfo(item.link))
+    --        local type = select(6, GetItemInfo(item.link))
+    --        print(name, type);
+    --    end
+    --end
 end
 
 function GatherLite:p2pDatabase()
     if IsInGuild() and GatherLite.db.char.p2p.guild then
         GatherLite:debug("Sharing database with guild")
-        for i, type in ipairs(GatherLite.db.global.nodes) do
-            GatherLite:SendCommMessage(_GatherLite.name .. "Sync", GatherLite:Serialize(GatherLite.db.global.nodes[type]), "GUILD")
+        for i, data in pairs(GatherLite.db.global.nodes) do
+            for i, node in pairs(data) do
+                GatherLite:SendCommMessage(_GatherLite.name .. "Node", GatherLite:Serialize(node), "GUILD", "NORMAL")
+            end
         end
     end
 end
-
-local minimapIcon = LibStub("LibDataBroker-1.1"):NewDataObject("GatherLiteMinimapIcon", {
-    type = "data source",
-    text = "Gatherlite",
-    icon = "Interface\\Icons\\inv_misc_spyglass_02",
-
-    OnClick = function(self, button)
-        if button == "LeftButton" then
-            if IsShiftKeyDown() then
-                GatherLite.db.char.enabled = not GatherLite.db.char.enabled;
-                GatherLite:drawMinimap();
-                GatherLite:drawWorldmap();
-                return ;
-            end
-
-            local dropDown = CreateFrame("Frame", "GatherLiteContextMenu", UIParent, "UIDropDownMenuTemplate")
-            UIDropDownMenu_Initialize(dropDown, GatherLite:MinimapContextMenu(), "MENU")
-            ToggleDropDownMenu(1, nil, dropDown, "cursor", 3, -3)
-        elseif button == "RightButton" then
-            if not OptionsPanel:IsShown() then
-                PlaySound(882);
-                LibStub("AceConfigDialog-3.0"):Open("GatherLite", OptionsPanel)
-            else
-                OptionsPanel:Hide();
-            end
-        end
-    end,
-
-    OnTooltipShow = function(tooltip)
-        tooltip:SetText(_GatherLite.name .. " |cFF00FF00" .. _GatherLite.version .. "|r");
-        tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('mining'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.mining));
-        tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('herbalism'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.herbalism));
-
-        if not _GatherLite.isClassic then
-            tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('archaeology'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.artifacts));
-        end
-        tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('fish'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.fish));
-        tooltip:AddDoubleLine(GatherLite:Colorize(GatherLite:translate('treasures'), "white"), GatherLite:tablelength(GatherLite.db.global.nodes.treasure));
-
-        tooltip:AddLine(" ");
-        tooltip:AddLine(Questie:Colorize("Left Click", 'gray') .. ": " .. "Open tracker menu");
-        tooltip:AddLine(Questie:Colorize("Shift + Left Click", 'gray') .. ": " .. "Toggle " .. _GatherLite.name);
-        tooltip:AddLine(Questie:Colorize("Right Click", 'gray') .. ": " .. "Open settings");
-    end,
-});
 
 -- event handler
 function GatherLite:EventHandler(event, ...)
@@ -928,6 +882,3 @@ function GatherLite:EventHandler(event, ...)
     end
 end
 
-function GatherLite:OnEnable()
-    GatherLite.minimap:Register("GatherLiteMinimapIcon", minimapIcon, self.db.profile.minimap);
-end

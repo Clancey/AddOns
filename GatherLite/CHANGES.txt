@@ -1,16 +1,10 @@
-lightweight tag 8c632fc92a1f266feac77f79028fa49bdc403ad4 1.2.4-classic
+lightweight tag fa6b313ff345509d7a3f7a9a98389bd54d440a6d 1.2.13-classic
 Author:	Wuild <wuildz@gmail.com>
-Date:	Sun Sep 8 02:55:22 2019 +0200
+Date:	Sun Sep 8 17:09:54 2019 +0200
 
-commit 8c632fc92a1f266feac77f79028fa49bdc403ad4
+commit fa6b313ff345509d7a3f7a9a98389bd54d440a6d
 Author: Wuild <wuildz@gmail.com>
-Date:   Sun Sep 8 02:55:22 2019 +0200
+Date:   Sun Sep 8 17:09:54 2019 +0200
 
-    Update README.md
-
-commit 9bc9b0afbfbe4a56ed5b2dc796e5113814a9a958
-Author: Wuild <wuildz@gmail.com>
-Date:   Sun Sep 8 02:52:55 2019 +0200
-
-    updated dependencies
+    Update methods.lua
 
